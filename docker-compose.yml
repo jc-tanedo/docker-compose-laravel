@@ -9,13 +9,13 @@ services:
       context: ./dockerfiles
       dockerfile: nginx.dockerfile
       args:
-        - UID=${UID:-1000}
-        - GID=${GID:-1000}
+        - UID=${UID}
+        - GID=${GID}
     container_name: nginx
     ports:
       - 80:80
     volumes:
-      - ./src:/var/www/html:delegated
+      - ${SRC_DIR}:/var/www/html:delegated
     depends_on:
       - php
       - redis
@@ -25,7 +25,7 @@ services:
       - laravel
 
   mysql:
-    image: mariadb:10.6
+    image: ${DB}:latest
     container_name: mysql
     restart: unless-stopped
     tty: true
@@ -38,6 +38,8 @@ services:
       MYSQL_ROOT_PASSWORD: secret
       SERVICE_TAGS: dev
       SERVICE_NAME: mysql
+    volumes:
+    - ./mysql:/var/lib/mysql
     networks:
       - laravel
 
@@ -46,11 +48,11 @@ services:
       context: ./dockerfiles
       dockerfile: php.dockerfile
       args:
-        - UID=${UID:-1000}
-        - GID=${GID:-1000}
+        - UID=${UID}
+        - GID=${GID}
     container_name: php
     volumes:
-      - ./src:/var/www/html:delegated
+      - ${SRC_DIR}:/var/www/html:delegated
     networks:
       - laravel
 
@@ -68,11 +70,11 @@ services:
       context: ./dockerfiles
       dockerfile: composer.dockerfile
       args:
-        - UID=${UID:-1000}
-        - GID=${GID:-1000}
+        - UID=${UID}
+        - GID=${GID}
     container_name: composer
     volumes:
-      - ./src:/var/www/html
+      - ${SRC_DIR}:/var/www/html
     working_dir: /var/www/html
     depends_on:
       - php
@@ -82,10 +84,10 @@ services:
       - laravel
 
   npm:
-    image: node:13.7
+    image: node:latest
     container_name: npm
     volumes:
-      - ./src:/var/www/html
+      - ${SRC_DIR}:/var/www/html
     ports:
       - 3000:3000
       - 3001:3001
@@ -99,11 +101,11 @@ services:
       context: ./dockerfiles
       dockerfile: php.dockerfile
       args:
-        - UID=${UID:-1000}
-        - GID=${GID:-1000}
+        - UID=${UID}
+        - GID=${GID}
     container_name: artisan
     volumes:
-      - ./src:/var/www/html:delegated
+      - ${SRC_DIR}:/var/www/html:delegated
     depends_on:
       - mysql
     working_dir: /var/www/html

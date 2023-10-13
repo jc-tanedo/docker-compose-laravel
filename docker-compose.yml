@@ -1,121 +1,104 @@
 version: '3'
 
 networks:
-  laravel:
+  docker-compose-laravel_laravel:
+    external: true
+  cloudbox:
+    external: true
 
 services:
-  site:
+  site_bo:
     build:
       context: ./dockerfiles
       dockerfile: nginx.dockerfile
       args:
         - UID=${UID:-1000}
         - GID=${GID:-1000}
-    container_name: nginx
+    container_name: nginx_bo
     ports:
-      - 80:80
+      - 8002:80
     volumes:
-      - ./src:/var/www/html:delegated
+      - ${SRC}:/var/www/html:delegated
     depends_on:
-      - php
-      - redis
-      - mysql
-      - mailhog
-    networks:
-      - laravel
-
-  mysql:
-    image: mariadb:10.6
-    container_name: mysql
-    restart: unless-stopped
-    tty: true
-    ports:
-      - 3306:3306
+      - php_bo
     environment:
-      MYSQL_DATABASE: homestead
-      MYSQL_USER: homestead
-      MYSQL_PASSWORD: secret
-      MYSQL_ROOT_PASSWORD: secret
-      SERVICE_TAGS: dev
-      SERVICE_NAME: mysql
+      VIRTUAL_HOST: mosaic-admin.jczr.dev
+      VIRTUAL_PORT: 8002
+      LETSENCRYPT_EMAIL: jcaezarrr@gmail.com
+      LETSENCRYPT_HOST: mosaic-admin.jczr.dev
     networks:
-      - laravel
+      - docker-compose-laravel_laravel
+      - cloudbox
 
-  php:
+  php_bo:
     build:
       context: ./dockerfiles
       dockerfile: php.dockerfile
       args:
         - UID=${UID:-1000}
         - GID=${GID:-1000}
-    container_name: php
+    container_name: php_bo
     volumes:
-      - ./src:/var/www/html:delegated
+      - ${SRC}:/var/www/html:delegated
     networks:
-      - laravel
+      - docker-compose-laravel_laravel
 
-  redis:
-    image: redis:alpine
-    container_name: redis
-    restart: unless-stopped
-    ports:
-      - 6379:6379
-    networks:
-      - laravel
-
-  composer:
+  composer_bo:
     build:
       context: ./dockerfiles
       dockerfile: composer.dockerfile
       args:
         - UID=${UID:-1000}
         - GID=${GID:-1000}
-    container_name: composer
+    container_name: composer_bo
     volumes:
-      - ./src:/var/www/html
+      - ${SRC}:/var/www/html
     working_dir: /var/www/html
     depends_on:
-      - php
+      - php_bo
     user: laravel
     entrypoint: ['composer', '--ignore-platform-reqs']
     networks:
-      - laravel
+      - docker-compose-laravel_laravel
 
-  npm:
-    image: node:13.7
-    container_name: npm
+  npm_bo:
+    image: node:latest
+    container_name: npm_bo
     volumes:
-      - ./src:/var/www/html
+      - ${SRC}:/var/www/html
     ports:
-      - 3000:3000
-      - 3001:3001
+      - 4000:3000
+      - 4001:3001
     working_dir: /var/www/html
     entrypoint: ['npm']
     networks:
-      - laravel
+      - docker-compose-laravel_laravel
 
-  artisan:
+  bun_bo:
+    image: jarredsumner/bun:edge
+    container_name: bun_bo
+    volumes:
+      - ${SRC}:/var/www/html
+    ports:
+      - 4000:3000
+      - 4001:3001
+    working_dir: /var/www/html
+    entrypoint: ['bun']
+    networks:
+      - docker-compose-laravel_laravel
+
+  artisan_bo:
     build:
       context: ./dockerfiles
       dockerfile: php.dockerfile
       args:
         - UID=${UID:-1000}
         - GID=${GID:-1000}
-    container_name: artisan
+    container_name: artisan_bo
     volumes:
-      - ./src:/var/www/html:delegated
-    depends_on:
-      - mysql
+      - ${SRC}:/var/www/html:delegated
     working_dir: /var/www/html
     entrypoint: ['php', '/var/www/html/artisan']
     networks:
-      - laravel
+      - docker-compose-laravel_laravel
 
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: mailhog
-    ports:
-      - 1025:1025
-      - 8025:8025
-    networks:
-      - laravel

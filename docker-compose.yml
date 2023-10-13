@@ -2,6 +2,10 @@ version: '3'
 
 networks:
   laravel:
+  cloudbox:
+    external: true
+  bridge:
+    external: true
 
 services:
   site:
@@ -13,31 +17,39 @@ services:
         - GID=${GID:-1000}
     container_name: nginx
     ports:
-      - 80:80
+      - 8001:80
     volumes:
-      - ./src:/var/www/html:delegated
+      - ${SRC}:/var/www/html:delegated
     depends_on:
       - php
       - redis
       - mysql
       - mailhog
+    environment:
+      VIRTUAL_HOST: mosaic.jczr.dev
+      VIRTUAL_PORT: 8001
+      LETSENCRYPT_EMAIL: jcaezarrr@gmail.com
+      LETSENCRYPT_HOST: mosaic.jczr.dev
     networks:
       - laravel
+      - cloudbox
 
   mysql:
-    image: mariadb:10.6
+    image: mysql:latest
     container_name: mysql
     restart: unless-stopped
     tty: true
     ports:
       - 3306:3306
     environment:
-      MYSQL_DATABASE: homestead
-      MYSQL_USER: homestead
-      MYSQL_PASSWORD: secret
-      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: pos_v2
+      MYSQL_USER: jczr
+      MYSQL_PASSWORD: P@ssw0rd
+      MYSQL_ROOT_PASSWORD: P@ssw0rd
       SERVICE_TAGS: dev
       SERVICE_NAME: mysql
+    volumes:
+      - /opt/mysql:/var/lib/mysql
     networks:
       - laravel
 
@@ -50,7 +62,7 @@ services:
         - GID=${GID:-1000}
     container_name: php
     volumes:
-      - ./src:/var/www/html:delegated
+      - ${SRC}:/var/www/html:delegated
     networks:
       - laravel
 
@@ -72,7 +84,7 @@ services:
         - GID=${GID:-1000}
     container_name: composer
     volumes:
-      - ./src:/var/www/html
+      - ${SRC}:/var/www/html
     working_dir: /var/www/html
     depends_on:
       - php
@@ -82,10 +94,10 @@ services:
       - laravel
 
   npm:
-    image: node:13.7
+    image: node:latest
     container_name: npm
     volumes:
-      - ./src:/var/www/html
+      - ${SRC}:/var/www/html
     ports:
       - 3000:3000
       - 3001:3001
@@ -93,6 +105,20 @@ services:
     entrypoint: ['npm']
     networks:
       - laravel
+
+  bun:
+    image: jarredsumner/bun:edge
+    container_name: bun
+    volumes:
+      - ${SRC}:/var/www/html
+    ports:
+      - 3000:3000
+      - 3001:3001
+    working_dir: /var/www/html
+    entrypoint: ['bun']
+    networks:
+      - laravel
+      - cloudbox
 
   artisan:
     build:
@@ -102,14 +128,21 @@ services:
         - UID=${UID:-1000}
         - GID=${GID:-1000}
     container_name: artisan
+    ports:
+      - 6001:6001
     volumes:
-      - ./src:/var/www/html:delegated
+      - ${SRC}:/var/www/html:delegated
     depends_on:
       - mysql
     working_dir: /var/www/html
     entrypoint: ['php', '/var/www/html/artisan']
     networks:
       - laravel
+    environment:
+      VIRTUAL_HOST: mosaic-ws.jczr.dev
+      VIRTUAL_PORT: 6001
+      LETSENCRYPT_HOST: mosaic-ws.jczr.dev
+      LETSENCRYPT_EMAIL: jcaezarrr@gmail.com
 
   mailhog:
     image: mailhog/mailhog:latest
